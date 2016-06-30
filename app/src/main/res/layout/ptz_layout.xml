@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical">
+
+    <Button
+        android:id="@+id/ptz_home"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerInParent="true"
+        android:text="@string/ptz_home" />
+
+    <Button
+        android:id="@+id/ptz_up"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_above="@id/ptz_home"
+        android:layout_alignLeft="@id/ptz_home"
+        android:text="@string/ptz_up" />
+
+    <Button
+        android:id="@+id/ptz_down"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignLeft="@id/ptz_home"
+        android:layout_below="@id/ptz_home"
+        android:text="@string/ptz_down" />
+
+    <Button
+        android:id="@+id/ptz_left"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignTop="@id/ptz_home"
+        android:layout_toLeftOf="@id/ptz_home"
+        android:text="@string/ptz_left" />
+
+    <Button
+        android:id="@+id/ptz_right"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignTop="@id/ptz_home"
+        android:layout_toRightOf="@id/ptz_home"
+        android:text="@string/ptz_right" />
+</RelativeLayout>

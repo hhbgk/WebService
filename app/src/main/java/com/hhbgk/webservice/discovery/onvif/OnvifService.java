@@ -9,11 +9,15 @@ import android.util.Base64;
 import android.util.Log;
 
 import com.hhbgk.webservice.discovery.data.model.CameraInfo;
+import com.hhbgk.webservice.discovery.data.model.PtzNode;
+import com.hhbgk.webservice.discovery.data.model.PtzSpaceInfo;
 import com.hhbgk.webservice.discovery.data.model.ServiceInfo;
 import com.hhbgk.webservice.discovery.data.model.StreamInfo;
+import com.hhbgk.webservice.discovery.util.Dbug;
 
 import org.ksoap2.SoapEnvelope;
 import org.ksoap2.SoapFault;
+import org.ksoap2.serialization.PropertyInfo;
 import org.ksoap2.serialization.SoapObject;
 import org.ksoap2.serialization.SoapSerializationEnvelope;
 import org.ksoap2.transport.HttpTransportSE;
@@ -54,7 +58,7 @@ import rx.functions.Action1;
 public class OnvifService {
     private final String tag = getClass().getSimpleName();
 
-    //private static OnvifService instance = null;
+    private static OnvifService instance = null;
     private final static int WS_DISCOVERY_PORT = 3702;
     private final static String WS_DISCOVERY_ADDRESS_IPv4 = "239.255.255.250";
     private final static String WS_DISCOVERY_PROBE_MESSAGE = "<soap:Envelope xmlns:soap=\"http://www.w3.org/2003/05/soap-envelope\" xmlns:wsa=\"http://schemas.xmlsoap.org/ws/2004/08/addressing\" xmlns:tns=\"http://schemas.xmlsoap.org/ws/2005/04/discovery\"><soap:Header><wsa:Action>http://schemas.xmlsoap.org/ws/2005/04/discovery/Probe</wsa:Action><wsa:MessageID>urn:uuid:c032cfdd-c3ca-49dc-820e-ee6696ad63e2</wsa:MessageID><wsa:To>urn:schemas-xmlsoap-org:ws:2005:04:discovery</wsa:To></soap:Header><soap:Body><tns:Probe/></soap:Body></soap:Envelope>";
@@ -66,15 +70,21 @@ public class OnvifService {
     private static final int MSG_GET_SERVICES = 101;
     private static final int MSG_GET_MEDIA_SERVICE = 102;
     private static final int MSG_GET_PTZ_SERVICE = 103;
+    private static final int MSG_SET_PTZ_CONTINUOUS_MOVE_UP = 200;
+    private static final int MSG_SET_PTZ_CONTINUOUS_MOVE_DOWN = 201;
+    private static final int MSG_SET_PTZ_CONTINUOUS_MOVE_LEFT = 202;
+    private static final int MSG_SET_PTZ_CONTINUOUS_MOVE_RIGHT = 203;
+    private static final int MSG_PTZ_GOTO_HOME_POSITION = 300;
+    private static final int MSG_STOP_PTZ_CONTINUOUS_MOVE = 301;
 
-/*    public static OnvifService getInstance() {
+    public static OnvifService getInstance() {
         if (null == instance) {
             instance = new OnvifService();
         }
         return instance;
-    }*/
+    }
 
-    public OnvifService() {
+    private OnvifService() {
         HandlerThread probeThread = new HandlerThread("HandlerThread_"+new Random().nextInt(Integer.MAX_VALUE));
         probeThread.start();
         Handler.Callback handlerCallback = new Handler.Callback() {
@@ -103,10 +113,60 @@ public class OnvifService {
                     case MSG_GET_MEDIA_SERVICE:
                         Log.i(tag, "media listener=" + msg.obj);
                         bundle = msg.getData();
-                        postRequest(bundle.getString("service_url"), bundle.getString("name_space"), bundle.getString("soap_action")
-                                , bundle.getString("method_name"), msg);
+                        if (bundle != null) {
+                            postRequest(bundle.getString("service_url"), bundle.getString("name_space"), bundle.getString("soap_action")
+                                    , bundle.getString("method_name"), msg);
+                        }
+
                         break;
                     case MSG_GET_PTZ_SERVICE:
+                        bundle = msg.getData();
+                        if (bundle != null) {
+                            postRequest(bundle.getString("service_url"), bundle.getString("name_space"), bundle.getString("soap_action")
+                                    , bundle.getString("method_name"), msg);
+                        }
+                        break;
+                    case MSG_SET_PTZ_CONTINUOUS_MOVE_UP:
+                        bundle = msg.getData();
+                        if (bundle != null) {
+                            postRequest(bundle.getString("service_url"), bundle.getString("name_space"), bundle.getString("soap_action")
+                                    , bundle.getString("method_name"), msg);
+                        }
+                        break;
+                    case MSG_SET_PTZ_CONTINUOUS_MOVE_DOWN:
+                        bundle = msg.getData();
+                        if (bundle != null) {
+                            postRequest(bundle.getString("service_url"), bundle.getString("name_space"), bundle.getString("soap_action")
+                                    , bundle.getString("method_name"), msg);
+                        }
+                        break;
+                    case MSG_STOP_PTZ_CONTINUOUS_MOVE:
+                        bundle = msg.getData();
+                        if (bundle != null) {
+                            postRequest(bundle.getString("service_url"), bundle.getString("name_space"), bundle.getString("soap_action")
+                                    , bundle.getString("method_name"), msg);
+                        }
+                        break;
+                    case MSG_PTZ_GOTO_HOME_POSITION:
+                        bundle = msg.getData();
+                        if (bundle != null) {
+                            postRequest(bundle.getString("service_url"), bundle.getString("name_space"), bundle.getString("soap_action")
+                                    , bundle.getString("method_name"), msg);
+                        }
+                        break;
+                    case MSG_SET_PTZ_CONTINUOUS_MOVE_RIGHT:
+                        bundle = msg.getData();
+                        if (bundle != null) {
+                            postRequest(bundle.getString("service_url"), bundle.getString("name_space"), bundle.getString("soap_action")
+                                    , bundle.getString("method_name"), msg);
+                        }
+                        break;
+                    case MSG_SET_PTZ_CONTINUOUS_MOVE_LEFT:
+                        bundle = msg.getData();
+                        if (bundle != null) {
+                            postRequest(bundle.getString("service_url"), bundle.getString("name_space"), bundle.getString("soap_action")
+                                    , bundle.getString("method_name"), msg);
+                        }
                         break;
                 }
 
@@ -117,28 +177,93 @@ public class OnvifService {
     }
 
     private void postRequest(String deviceService, String nameSpace, String soapAction, String methodName, Message msg) {
-        Log.e(tag, "soapAction=" + soapAction);
+        Log.e(tag, "soapAction=" + soapAction + "\nnameSpace=" + nameSpace);
 //        String created = getCreated();
 //        String nonce = getNonce();
         SoapObject soapObject = new SoapObject(nameSpace, methodName);
+
 //        soapObject.addProperty("Username", "admin");
 //        soapObject.addProperty("Password", getPasswordEncode(nonce, "888888", created));
 //        soapObject.addProperty("Nonce", nonce);
 //        soapObject.addProperty("Created", created);
+        SoapObject tempSoapObject, attributeSoapObject;
         switch (msg.what) {
             case MSG_GET_MEDIA_SERVICE:
                 soapObject.addProperty("Stream", "RTP-Unicast");
                 soapObject.addProperty("Protocol", "UDP");
                 soapObject.addProperty("ProfileToken", "PROFILE_000");
                 break;
+            case MSG_SET_PTZ_CONTINUOUS_MOVE_UP:
+                soapObject.addProperty("ProfileToken", "PROFILE_000");
+                attributeSoapObject = new SoapObject();
+                attributeSoapObject.addAttribute("space", "http://www.onvif.org/ver10/tptz/PanTiltSpaces/VelocityGenericSpace");
+                attributeSoapObject.addAttribute("y", "0.5");
+                attributeSoapObject.addAttribute("x", "0");
+
+                tempSoapObject = new SoapObject();
+                tempSoapObject.addProperty("PanTilt", attributeSoapObject);
+                soapObject.addProperty("Velocity", tempSoapObject);
+                break;
+            case MSG_SET_PTZ_CONTINUOUS_MOVE_DOWN:
+                soapObject.addProperty("ProfileToken", "PROFILE_000");
+
+                attributeSoapObject = new SoapObject();
+                attributeSoapObject.addAttribute("space", "http://www.onvif.org/ver10/tptz/PanTiltSpaces/VelocityGenericSpace");
+                attributeSoapObject.addAttribute("y", "-0.5");
+                attributeSoapObject.addAttribute("x", "0");
+
+                tempSoapObject = new SoapObject();
+                tempSoapObject.addProperty("PanTilt", attributeSoapObject);
+                soapObject.addProperty("Velocity", tempSoapObject);
+                break;
+            case MSG_SET_PTZ_CONTINUOUS_MOVE_LEFT:
+                soapObject.addProperty("ProfileToken", "PROFILE_000");
+
+                attributeSoapObject = new SoapObject();
+                attributeSoapObject.addAttribute("space", "http://www.onvif.org/ver10/tptz/PanTiltSpaces/VelocityGenericSpace");
+                attributeSoapObject.addAttribute("x", "-0.5");
+                attributeSoapObject.addAttribute("y", "0");
+
+                tempSoapObject = new SoapObject();
+                tempSoapObject.addProperty("PanTilt", attributeSoapObject);
+                soapObject.addProperty("Velocity", tempSoapObject);
+                break;
+            case MSG_SET_PTZ_CONTINUOUS_MOVE_RIGHT:
+                soapObject.addProperty("ProfileToken", "PROFILE_000");
+
+                attributeSoapObject = new SoapObject();
+                attributeSoapObject.addAttribute("space", "http://www.onvif.org/ver10/tptz/PanTiltSpaces/VelocityGenericSpace");
+                attributeSoapObject.addAttribute("x", "0.5");
+                attributeSoapObject.addAttribute("y", "0");
+
+                tempSoapObject = new SoapObject();
+                tempSoapObject.addProperty("PanTilt", attributeSoapObject);
+                soapObject.addProperty("Velocity", tempSoapObject);
+                break;
+            case MSG_STOP_PTZ_CONTINUOUS_MOVE:
+                soapObject.addProperty("ProfileToken", "PROFILE_000");
+                soapObject.addProperty("PanTilt", "true");
+                soapObject.addProperty("Zoom", "false");
+                break;
+            case MSG_PTZ_GOTO_HOME_POSITION:
+                soapObject.addProperty("ProfileToken", "PROFILE_000");
+
+                attributeSoapObject = new SoapObject();
+                attributeSoapObject.addAttribute("space", "http://www.onvif.org/ver10/tptz/PanTiltSpaces/VelocityGenericSpace");
+                attributeSoapObject.addAttribute("y", "0.5");
+                attributeSoapObject.addAttribute("x", "0");
+
+                tempSoapObject = new SoapObject();
+                tempSoapObject.addProperty("PanTilt", attributeSoapObject);
+                soapObject.addProperty("Speed", tempSoapObject);
+                break;
         }
         final SoapSerializationEnvelope soapSerializationEnvelope = new SoapSerializationEnvelope(SoapEnvelope.VER12);
         soapSerializationEnvelope.bodyOut = soapObject;
         soapSerializationEnvelope.dotNet = true;
-//        soapSerializationEnvelope.setOutputSoapObject(soapObject);
+        soapSerializationEnvelope.implicitTypes = true;
 
         final HttpTransportSE httpSe = new HttpTransportSE(deviceService, 5000);
-        //httpSe.debug = true;
         try {
             httpSe.call(soapAction, soapSerializationEnvelope);
         } catch (IOException | XmlPullParserException e) {
@@ -180,9 +305,50 @@ public class OnvifService {
                             onGetMediaServiceListener.onSuccess(mediaServiceList);
                         }
                         break;
+                    case MSG_GET_PTZ_SERVICE:
+                        //Dbug.e(tag, "result count="+ result.getPropertyCount());
+                        List<PtzNode> ptzServiceList = new ArrayList<>();
+                        for (int i = 0; i < result.getPropertyCount(); i++) {
+                            SoapObject ptzNodeObject = (SoapObject) result.getProperty(i);
+                            //Dbug.w(tag, "HomeSupported="+ ptzNodeObject.getPropertySafely("HomeSupported")
+                              //      +", name=" + ptzNodeObject.getPropertySafely("MaximumNumberOfPresets") + ", HomeSupported=" + ptzNodeObject.getPrimitivePropertySafely("HomeSupported"));
+
+                            PtzNode ptzNode = new PtzNode();
+
+                            ptzNode.setHomeSupported(Boolean.parseBoolean(ptzNodeObject.getPrimitivePropertySafely("HomeSupported").toString()));
+                            ptzNode.setMaximumNumberOfPresets(Integer.parseInt(ptzNodeObject.getPropertySafely("MaximumNumberOfPresets").toString()));
+                            SoapObject supportedPTZSpaces = (SoapObject) ptzNodeObject.getPropertySafely("SupportedPTZSpaces");
+                            for (int j = 0; j < supportedPTZSpaces.getPropertyCount(); j ++){
+                                PropertyInfo propertyInfo = supportedPTZSpaces.getPropertyInfo(j);
+                                //Dbug.e(tag, "getName==\n" + propertyInfo.getName() + ">>>>>>>"+propertyInfo.getNamespace()+", >>>>>>"+propertyInfo.getElementType()
+                                //+",>>>>>>>>>" + propertyInfo.getType()+",>>>>>>>" + propertyInfo.getFlags() + ",>>>>>>>>>>" +propertyInfo.getValue());
+                                SoapObject space = (SoapObject) supportedPTZSpaces.getPropertySafely(propertyInfo.getName());
+                                PtzSpaceInfo ptzSpaceInfo = new PtzSpaceInfo();
+                                //Dbug.w(tag, "URI=" + space.getPropertySafely("URI")+ ", nameSpace=" + space.getNamespace() +", nameSpace="+ propertyInfo.getNamespace());
+                                ptzSpaceInfo.setUri((String) space.getPrimitivePropertySafely("URI"));
+                                if (space.hasProperty("XRange")){
+                                    SoapObject xRange = (SoapObject) space.getPropertySafely("XRange");
+                                    //Dbug.w(tag, "Min=" + xRange.getPropertySafely("Min") + ",Max="+ xRange.getPropertySafely("Max"));
+                                    ptzSpaceInfo.setMinXRange(Float.parseFloat(xRange.getPrimitivePropertySafely("Min").toString()));
+                                    ptzSpaceInfo.setMaxXRange(Float.parseFloat(xRange.getPrimitivePropertySafely("Max").toString()));
+                                }
+                                if (space.hasProperty("YRange")){
+                                    SoapObject yRange = (SoapObject) space.getPropertySafely("YRange");
+                                    //Dbug.w(tag, "Min=" + yRange.getPropertySafely("Min") + ",Max="+ yRange.getPropertySafely("Max"));
+                                    ptzSpaceInfo.setMinYRange(Float.parseFloat(yRange.getPrimitivePropertySafely("Min").toString()));
+                                    ptzSpaceInfo.setMaxYRange(Float.parseFloat(yRange.getPrimitivePropertySafely("Max").toString()));
+                                }
+                                ptzNode.setPtzSpaceInfo(ptzSpaceInfo);
+                                ptzServiceList.add(ptzNode);
+                            }
+                        }
+                        Dbug.w(tag, "ptzServiceList size=" + ptzServiceList.size());
+                        OnGetPtzServiceListener listener = (OnGetPtzServiceListener) msg.obj;
+                        if (listener != null) {
+                            listener.onSuccess(ptzServiceList);
+                        }
+                        break;
                 }
-
-
             } else {
                 Log.e(tag, "Request and response failing");
                 switch (msg.what) {
@@ -222,6 +388,11 @@ public class OnvifService {
         void onFailure(String message);
     }
 
+    public interface OnGetPtzServiceListener {
+        void onSuccess(List<PtzNode> ptzNodeInfoList);
+        void onFailure(String message);
+    }
+
     public void probeDeviceService(OnProbeListener listener) {
         Log.e(tag, "mOnProbeListener=" + mOnProbeListener);
         mOnProbeListener = listener;
@@ -254,7 +425,7 @@ public class OnvifService {
         mHandler.sendMessageDelayed(message, 200);
     }
 
-    /*public void requestPtzService(String serviceURL, OnGetServicesListener listener) {
+    public void requestPtzService(String serviceURL, OnGetPtzServiceListener listener) {
         mHandler.removeMessages(MSG_GET_PTZ_SERVICE);
         Message message = Message.obtain();
         message.what = MSG_GET_PTZ_SERVICE;
@@ -267,7 +438,91 @@ public class OnvifService {
         message.setData(bundle);
         mHandler.sendMessageDelayed(message, 200);
     }
-*/
+
+    public void requestPtzContinuousMoveUp(String serviceURL, OnGetPtzServiceListener listener) {
+        mHandler.removeMessages(MSG_SET_PTZ_CONTINUOUS_MOVE_UP);
+        Message message = Message.obtain();
+        message.what = MSG_SET_PTZ_CONTINUOUS_MOVE_UP;
+        message.obj = listener;
+        Bundle bundle = new Bundle();
+        bundle.putString("service_url", serviceURL);
+        bundle.putString("name_space", "http://www.onvif.org/ver20/ptz/wsdl");
+        bundle.putString("soap_action", "http://www.onvif.org/ver20/ptz/wsdl/ContinuousMove");
+        bundle.putString("method_name", "ContinuousMove");
+        message.setData(bundle);
+        mHandler.sendMessageDelayed(message, 200);
+    }
+
+    public void requestPtzContinuousMoveDown(String serviceURL, OnGetPtzServiceListener listener) {
+        mHandler.removeMessages(MSG_SET_PTZ_CONTINUOUS_MOVE_DOWN);
+        Message message = Message.obtain();
+        message.what = MSG_SET_PTZ_CONTINUOUS_MOVE_DOWN;
+        message.obj = listener;
+        Bundle bundle = new Bundle();
+        bundle.putString("service_url", serviceURL);
+        bundle.putString("name_space", "http://www.onvif.org/ver20/ptz/wsdl");
+        bundle.putString("soap_action", "http://www.onvif.org/ver20/ptz/wsdl/ContinuousMove");
+        bundle.putString("method_name", "ContinuousMove");
+        message.setData(bundle);
+        mHandler.sendMessageDelayed(message, 200);
+    }
+
+    public void requestPtzContinuousMoveLeft(String serviceURL, OnGetPtzServiceListener listener) {
+        mHandler.removeMessages(MSG_SET_PTZ_CONTINUOUS_MOVE_LEFT);
+        Message message = Message.obtain();
+        message.what = MSG_SET_PTZ_CONTINUOUS_MOVE_LEFT;
+        message.obj = listener;
+        Bundle bundle = new Bundle();
+        bundle.putString("service_url", serviceURL);
+        bundle.putString("name_space", "http://www.onvif.org/ver20/ptz/wsdl");
+        bundle.putString("soap_action", "http://www.onvif.org/ver20/ptz/wsdl/ContinuousMove");
+        bundle.putString("method_name", "ContinuousMove");
+        message.setData(bundle);
+        mHandler.sendMessageDelayed(message, 200);
+    }
+
+    public void requestPtzContinuousMoveRight(String serviceURL, OnGetPtzServiceListener listener) {
+        mHandler.removeMessages(MSG_SET_PTZ_CONTINUOUS_MOVE_RIGHT);
+        Message message = Message.obtain();
+        message.what = MSG_SET_PTZ_CONTINUOUS_MOVE_RIGHT;
+        message.obj = listener;
+        Bundle bundle = new Bundle();
+        bundle.putString("service_url", serviceURL);
+        bundle.putString("name_space", "http://www.onvif.org/ver20/ptz/wsdl");
+        bundle.putString("soap_action", "http://www.onvif.org/ver20/ptz/wsdl/ContinuousMove");
+        bundle.putString("method_name", "ContinuousMove");
+        message.setData(bundle);
+        mHandler.sendMessageDelayed(message, 200);
+    }
+
+    public void requestStopPtzContinuousMove(String serviceURL, OnGetPtzServiceListener listener) {
+        mHandler.removeMessages(MSG_STOP_PTZ_CONTINUOUS_MOVE);
+        Message message = Message.obtain();
+        message.what = MSG_STOP_PTZ_CONTINUOUS_MOVE;
+        message.obj = listener;
+        Bundle bundle = new Bundle();
+        bundle.putString("service_url", serviceURL);
+        bundle.putString("name_space", "http://www.onvif.org/ver20/ptz/wsdl");
+        bundle.putString("soap_action", "http://www.onvif.org/ver20/ptz/wsdl/Stop");
+        bundle.putString("method_name", "Stop");
+        message.setData(bundle);
+        mHandler.sendMessageDelayed(message, 200);
+    }
+
+    public void requestPtzGotoHomePosition(String serviceURL, OnGetPtzServiceListener listener) {
+        mHandler.removeMessages(MSG_PTZ_GOTO_HOME_POSITION);
+        Message message = Message.obtain();
+        message.what = MSG_PTZ_GOTO_HOME_POSITION;
+        message.obj = listener;
+        Bundle bundle = new Bundle();
+        bundle.putString("service_url", serviceURL);
+        bundle.putString("name_space", "http://www.onvif.org/ver20/ptz/wsdl");
+        bundle.putString("soap_action", "http://www.onvif.org/ver20/ptz/wsdl/GotoHomePosition");
+        bundle.putString("method_name", "GotoHomePosition");
+        message.setData(bundle);
+        mHandler.sendMessageDelayed(message, 200);
+    }
+
     private Collection<InetAddress> getLoopAddress() {
         final Collection<InetAddress> addressList = new ArrayList<>();
         try {

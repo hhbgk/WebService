@@ -42,10 +42,7 @@ public class DeviceList extends Fragment {
         mRecyclerView.setLayoutManager(new LinearLayoutManager(getActivity()));
         mDeviceAdapter = new DeviceAdapter();
         mRecyclerView.setAdapter(mDeviceAdapter);
-
-        if (mOnvifService == null) {
-            mOnvifService = new OnvifService();
-        }
+        mOnvifService = OnvifService.getInstance();
         mDeviceAdapter.setOnItemClickListener(new DeviceAdapter.OnItemClickListener() {
             @Override
             public void onItemClick(View view, int position) {

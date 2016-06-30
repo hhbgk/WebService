@@ -1,5 +1,6 @@
 package com.hhbgk.webservice.discovery.ui.fragment;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
@@ -15,7 +16,9 @@ import com.hhbgk.webservice.discovery.R;
 import com.hhbgk.webservice.discovery.data.model.ServiceInfo;
 import com.hhbgk.webservice.discovery.data.model.StreamInfo;
 import com.hhbgk.webservice.discovery.onvif.OnvifService;
+import com.hhbgk.webservice.discovery.ui.activity.PTZActivity;
 import com.hhbgk.webservice.discovery.ui.adapter.ServiceAdapter;
+import com.hhbgk.webservice.discovery.util.Dbug;
 
 import java.util.List;
 
@@ -44,7 +47,7 @@ public class ServiceList extends Fragment {
                 Log.i(tag, "size======" + mServiceInfoList.size());
             }
         }*/
-        mOnvifService = new OnvifService();
+        mOnvifService = OnvifService.getInstance();
     }
 
     @Nullable
@@ -63,31 +66,28 @@ public class ServiceList extends Fragment {
         mDeviceAdapter.setOnItemClickListener(new ServiceAdapter.OnItemClickListener() {
             @Override
             public void onItemClick(View view, int position) {
-                switch (position) {
-                    case 0:
-                        break;
-                    case 1:
-                        mOnvifService.requestMediaService(mServiceInfoList.get(position).getUri(), new OnvifService.OnGetMediaServiceListener() {
-                            @Override
-                            public void onSuccess(List<StreamInfo> serviceInfoList) {
-                                StreamInfo streamInfo = serviceInfoList.get(0);
-                                Log.i(tag, "uri=" + streamInfo.getStreamUri());
-                                Toast.makeText(getActivity(), "RTSP:"+streamInfo.getStreamUri(), Toast.LENGTH_LONG).show();
-                            }
+                String serviceURL = mServiceInfoList.get(position).getUri();
+                Dbug.i(tag, "position = " + position + ", "+ serviceURL);
+                if (mServiceInfoList.get(position).getUri().contains("media_service")){
+                    mOnvifService.requestMediaService(mServiceInfoList.get(position).getUri(), new OnvifService.OnGetMediaServiceListener() {
+                        @Override
+                        public void onSuccess(List<StreamInfo> serviceInfoList) {
+                            StreamInfo streamInfo = serviceInfoList.get(0);
+                            Log.i(tag, "uri=" + streamInfo.getStreamUri());
+                            Toast.makeText(getActivity(), "RTSP:"+streamInfo.getStreamUri(), Toast.LENGTH_LONG).show();
+                        }
 
-                            @Override
-                            public void onFailure(String message) {
+                        @Override
+                        public void onFailure(String message) {
 
-                            }
-                        });
-                        break;
-                    case 2:
-                        break;
-                    case 3:
+                        }
+                    });
+                } else if (mServiceInfoList.get(position).getUri().contains("ptz_service")) {
+                    Intent intent = new Intent(getActivity(), PTZActivity.class);
+                    intent.putExtra("service_url", mServiceInfoList.get(position).getUri());
+                    startActivity(intent);
+                } else if (mServiceInfoList.get(position).getNamespace().contains("image_service")) {
 
-                        break;
-                    default:
-                        break;
                 }
             }
         });

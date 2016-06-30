@@ -1,3 +1,8 @@
 <resources>
     <string name="app_name">WebService</string>
+    <string name="ptz_up">Up</string>
+    <string name="ptz_down">Down</string>
+    <string name="ptz_left">Left</string>
+    <string name="ptz_right">Right</string>
+    <string name="ptz_home">Home</string>
 </resources>
