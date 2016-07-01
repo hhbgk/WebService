@@ -1,7 +1,5 @@
 package com.hhbgk.webservice.discovery.onvif;
 
-import android.util.Log;
-
 import com.hhbgk.webservice.discovery.data.model.CameraInfo;
 
 import org.xml.sax.Attributes;
@@ -24,7 +22,7 @@ public class OnvifProbeXmlHandler extends DefaultHandler {
 
     @Override
     public void startDocument() throws SAXException {
-        Log.i(tag, "startDocument=");
+        //Log.i(tag, "startDocument=");
         mCameraInfo = new CameraInfo();
     }
 
@@ -35,7 +33,7 @@ public class OnvifProbeXmlHandler extends DefaultHandler {
             mOnCompletionListener.onCompletion(mCameraInfo);
             mOnCompletionListener = null;
         }
-        Log.i(tag, "endDocument=");
+        //Log.i(tag, "endDocument=");
     }
 
     @Override
@@ -56,13 +54,13 @@ public class OnvifProbeXmlHandler extends DefaultHandler {
             case "XAddrs":
                 char[] xaddrs = new char[length];
                 System.arraycopy(ch, start, xaddrs, 0, length);
-                Log.e(tag, "characters=" + String.valueOf(xaddrs));
+                //Log.e(tag, "characters=" + String.valueOf(xaddrs));
                 mCameraInfo.setUri(String.valueOf(xaddrs));
                 break;
             case "Scopes":
                 char[] scopes = new char[length];
                 System.arraycopy(ch, start, scopes, 0, length);
-                Log.e(tag, "characters=" + String.valueOf(scopes));
+                //Log.e(tag, "characters=" + String.valueOf(scopes));
                 String[] scopesArray = String.valueOf(scopes).split(" ");
                 for (String s : scopesArray) {
                     if (s.startsWith("onvif://www.onvif.org/name/")) {

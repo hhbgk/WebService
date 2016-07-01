@@ -19,8 +19,11 @@ import org.ksoap2.SoapEnvelope;
 import org.ksoap2.SoapFault;
 import org.ksoap2.serialization.PropertyInfo;
 import org.ksoap2.serialization.SoapObject;
+import org.ksoap2.serialization.SoapPrimitive;
 import org.ksoap2.serialization.SoapSerializationEnvelope;
 import org.ksoap2.transport.HttpTransportSE;
+import org.kxml2.kdom.Element;
+import org.kxml2.kdom.Node;
 import org.xml.sax.SAXException;
 import org.xmlpull.v1.XmlPullParserException;
 
@@ -61,7 +64,14 @@ public class OnvifService {
     private static OnvifService instance = null;
     private final static int WS_DISCOVERY_PORT = 3702;
     private final static String WS_DISCOVERY_ADDRESS_IPv4 = "239.255.255.250";
-    private final static String WS_DISCOVERY_PROBE_MESSAGE = "<soap:Envelope xmlns:soap=\"http://www.w3.org/2003/05/soap-envelope\" xmlns:wsa=\"http://schemas.xmlsoap.org/ws/2004/08/addressing\" xmlns:tns=\"http://schemas.xmlsoap.org/ws/2005/04/discovery\"><soap:Header><wsa:Action>http://schemas.xmlsoap.org/ws/2005/04/discovery/Probe</wsa:Action><wsa:MessageID>urn:uuid:c032cfdd-c3ca-49dc-820e-ee6696ad63e2</wsa:MessageID><wsa:To>urn:schemas-xmlsoap-org:ws:2005:04:discovery</wsa:To></soap:Header><soap:Body><tns:Probe/></soap:Body></soap:Envelope>";
+    private final static String WS_DISCOVERY_PROBE_MESSAGE =
+            "<soap:Envelope xmlns:soap=\"http://www.w3.org/2003/05/soap-envelope\" " +
+            "xmlns:wsa=\"http://schemas.xmlsoap.org/ws/2004/08/addressing\" " +
+            "xmlns:tns=\"http://schemas.xmlsoap.org/ws/2005/04/discovery\">" +
+            "<soap:Header><wsa:Action>http://schemas.xmlsoap.org/ws/2005/04/discovery/Probe</wsa:Action>" +
+            "<wsa:MessageID>urn:uuid:c032cfdd-c3ca-49dc-820e-ee6696ad63e2</wsa:MessageID>" +
+            "<wsa:To>urn:schemas-xmlsoap-org:ws:2005:04:discovery</wsa:To></soap:Header>" +
+            "<soap:Body><tns:Probe/></soap:Body></soap:Envelope>";
     private static final Random random = new SecureRandom();
 
     private final Handler mHandler;
@@ -94,7 +104,6 @@ public class OnvifService {
                 Bundle bundle;
                 switch (msg.what) {
                     case MSG_WS_PROBE:
-                        Log.i(tag, "11111 thread id==" + Thread.currentThread().getId());
                         for (InetAddress inetAddress : getLoopAddress()) {
                             //Log.i(tag, "ip==" + inetAddress.getHostName());
                             if (inetAddress instanceof Inet4Address) {
@@ -103,15 +112,13 @@ public class OnvifService {
                         }
                         break;
                     case MSG_GET_SERVICES:
-                        Log.i(tag, "get service listener=" + msg.obj);
                         bundle = msg.getData();
-                        String nameSpace = "http://www.onvif.org/ver10/device/wsdl";
-                        String soapAction = "http://www.onvif.org/ver10/device/wsdl/GetServices";
-                        String methodName = "GetServices";
-                        postRequest(bundle.getString("service_url"), nameSpace, soapAction, methodName, msg);
+                        if (bundle != null) {
+                            postRequest(bundle.getString("service_url"), bundle.getString("name_space"), bundle.getString("soap_action")
+                                    , bundle.getString("method_name"), msg);
+                        }
                         break;
                     case MSG_GET_MEDIA_SERVICE:
-                        Log.i(tag, "media listener=" + msg.obj);
                         bundle = msg.getData();
                         if (bundle != null) {
                             postRequest(bundle.getString("service_url"), bundle.getString("name_space"), bundle.getString("soap_action")
@@ -177,15 +184,9 @@ public class OnvifService {
     }
 
     private void postRequest(String deviceService, String nameSpace, String soapAction, String methodName, Message msg) {
-        Log.e(tag, "soapAction=" + soapAction + "\nnameSpace=" + nameSpace);
-//        String created = getCreated();
-//        String nonce = getNonce();
+        Log.e(tag, "soapAction=" + soapAction + "\nnameSpace=" + nameSpace + "\nmethodName" + methodName);
         SoapObject soapObject = new SoapObject(nameSpace, methodName);
 
-//        soapObject.addProperty("Username", "admin");
-//        soapObject.addProperty("Password", getPasswordEncode(nonce, "888888", created));
-//        soapObject.addProperty("Nonce", nonce);
-//        soapObject.addProperty("Created", created);
         SoapObject tempSoapObject, attributeSoapObject;
         switch (msg.what) {
             case MSG_GET_MEDIA_SERVICE:
@@ -194,15 +195,25 @@ public class OnvifService {
                 soapObject.addProperty("ProfileToken", "PROFILE_000");
                 break;
             case MSG_SET_PTZ_CONTINUOUS_MOVE_UP:
-                soapObject.addProperty("ProfileToken", "PROFILE_000");
-                attributeSoapObject = new SoapObject();
+                //soapObject.addAttribute();
+                /*AttributeInfo attributeInfo = new AttributeInfo();
+                attributeInfo.setType(String.class);
+                attributeInfo.setNamespace(nameSpace);
+                soapObject.addAttribute(attributeInfo);
+                soapObject.setAttribute(attributeInfo);*/
+
+                soapObject.addProperty(nameSpace, "ProfileToken", "PROFILE_000");
+
+                //"http://www.onvif.org/ver10/schema"
+                attributeSoapObject = new SoapObject("http://www.onvif.org/ver10/schema", "PanTilt");
                 attributeSoapObject.addAttribute("space", "http://www.onvif.org/ver10/tptz/PanTiltSpaces/VelocityGenericSpace");
                 attributeSoapObject.addAttribute("y", "0.5");
                 attributeSoapObject.addAttribute("x", "0");
 
-                tempSoapObject = new SoapObject();
-                tempSoapObject.addProperty("PanTilt", attributeSoapObject);
-                soapObject.addProperty("Velocity", tempSoapObject);
+                tempSoapObject = new SoapObject(nameSpace, "Velocity");
+                //tempSoapObject.addProperty("PanTilt", attributeSoapObject);
+                tempSoapObject.addSoapObject(attributeSoapObject);
+                soapObject.addSoapObject(tempSoapObject);
                 break;
             case MSG_SET_PTZ_CONTINUOUS_MOVE_DOWN:
                 soapObject.addProperty("ProfileToken", "PROFILE_000");
@@ -260,8 +271,12 @@ public class OnvifService {
         }
         final SoapSerializationEnvelope soapSerializationEnvelope = new SoapSerializationEnvelope(SoapEnvelope.VER12);
         soapSerializationEnvelope.bodyOut = soapObject;
-        soapSerializationEnvelope.dotNet = true;
+        soapSerializationEnvelope.dotNet = false;
         soapSerializationEnvelope.implicitTypes = true;
+        soapSerializationEnvelope.setAddAdornments(false);
+
+        soapSerializationEnvelope.headerOut = new Element[1];
+        soapSerializationEnvelope.headerOut[0] = createHeader(soapSerializationEnvelope, "admin", "888888");
 
         final HttpTransportSE httpSe = new HttpTransportSE(deviceService, 5000);
         try {
@@ -270,105 +285,154 @@ public class OnvifService {
             e.printStackTrace();
         }
 
+        Object response = null;
         try {
-            if (soapSerializationEnvelope.getResponse() != null) {
-                SoapObject result = (SoapObject) soapSerializationEnvelope.bodyIn;
-                Log.w(tag, "result getName: " + result.getName() + ", getPropertyCount=" + result.getPropertyCount());
-                Log.i(tag, "result=\n" + result.toString());
-                switch (msg.what) {
-                    case MSG_GET_SERVICES:
-                        List<ServiceInfo> serviceInfoList = new ArrayList<>();
-                        for (int i = 0; i < result.getPropertyCount(); i++) {
-                            SoapObject sub = (SoapObject) result.getProperty(i);
-                            ServiceInfo serviceInfo = new ServiceInfo();
-                            serviceInfo.setNamespace(sub.getPropertySafely("Namespace").toString());
-                            serviceInfo.setUri(sub.getPropertySafely("XAddr").toString());
-                            serviceInfoList.add(serviceInfo);
-                        }
-                        OnGetServicesListener onResponseListener = (OnGetServicesListener) msg.obj;
-                        if (onResponseListener != null) {
-                            onResponseListener.onSuccess(serviceInfoList);
-                        }
-                        break;
-                    case MSG_GET_MEDIA_SERVICE:
-                        List<StreamInfo> mediaServiceList = new ArrayList<>();
-                        for (int i = 0; i < result.getPropertyCount(); i++) {
-                            SoapObject sub = (SoapObject) result.getProperty(i);
-                            StreamInfo streamInfo = new StreamInfo();
-                            streamInfo.setNamespace(sub.getPropertySafely("Namespace").toString());
-                            streamInfo.setUri(sub.getPropertySafely("XAddr").toString());
-                            streamInfo.setStreamUri(sub.getPropertySafely("Uri").toString());
-                            mediaServiceList.add(streamInfo);
-                        }
-                        OnGetMediaServiceListener onGetMediaServiceListener = (OnGetMediaServiceListener) msg.obj;
-                        if (onGetMediaServiceListener != null) {
-                            onGetMediaServiceListener.onSuccess(mediaServiceList);
-                        }
-                        break;
-                    case MSG_GET_PTZ_SERVICE:
-                        //Dbug.e(tag, "result count="+ result.getPropertyCount());
-                        List<PtzNode> ptzServiceList = new ArrayList<>();
-                        for (int i = 0; i < result.getPropertyCount(); i++) {
-                            SoapObject ptzNodeObject = (SoapObject) result.getProperty(i);
-                            //Dbug.w(tag, "HomeSupported="+ ptzNodeObject.getPropertySafely("HomeSupported")
-                              //      +", name=" + ptzNodeObject.getPropertySafely("MaximumNumberOfPresets") + ", HomeSupported=" + ptzNodeObject.getPrimitivePropertySafely("HomeSupported"));
-
-                            PtzNode ptzNode = new PtzNode();
-
-                            ptzNode.setHomeSupported(Boolean.parseBoolean(ptzNodeObject.getPrimitivePropertySafely("HomeSupported").toString()));
-                            ptzNode.setMaximumNumberOfPresets(Integer.parseInt(ptzNodeObject.getPropertySafely("MaximumNumberOfPresets").toString()));
-                            SoapObject supportedPTZSpaces = (SoapObject) ptzNodeObject.getPropertySafely("SupportedPTZSpaces");
-                            for (int j = 0; j < supportedPTZSpaces.getPropertyCount(); j ++){
-                                PropertyInfo propertyInfo = supportedPTZSpaces.getPropertyInfo(j);
-                                //Dbug.e(tag, "getName==\n" + propertyInfo.getName() + ">>>>>>>"+propertyInfo.getNamespace()+", >>>>>>"+propertyInfo.getElementType()
-                                //+",>>>>>>>>>" + propertyInfo.getType()+",>>>>>>>" + propertyInfo.getFlags() + ",>>>>>>>>>>" +propertyInfo.getValue());
-                                SoapObject space = (SoapObject) supportedPTZSpaces.getPropertySafely(propertyInfo.getName());
-                                PtzSpaceInfo ptzSpaceInfo = new PtzSpaceInfo();
-                                //Dbug.w(tag, "URI=" + space.getPropertySafely("URI")+ ", nameSpace=" + space.getNamespace() +", nameSpace="+ propertyInfo.getNamespace());
-                                ptzSpaceInfo.setUri((String) space.getPrimitivePropertySafely("URI"));
-                                if (space.hasProperty("XRange")){
-                                    SoapObject xRange = (SoapObject) space.getPropertySafely("XRange");
-                                    //Dbug.w(tag, "Min=" + xRange.getPropertySafely("Min") + ",Max="+ xRange.getPropertySafely("Max"));
-                                    ptzSpaceInfo.setMinXRange(Float.parseFloat(xRange.getPrimitivePropertySafely("Min").toString()));
-                                    ptzSpaceInfo.setMaxXRange(Float.parseFloat(xRange.getPrimitivePropertySafely("Max").toString()));
-                                }
-                                if (space.hasProperty("YRange")){
-                                    SoapObject yRange = (SoapObject) space.getPropertySafely("YRange");
-                                    //Dbug.w(tag, "Min=" + yRange.getPropertySafely("Min") + ",Max="+ yRange.getPropertySafely("Max"));
-                                    ptzSpaceInfo.setMinYRange(Float.parseFloat(yRange.getPrimitivePropertySafely("Min").toString()));
-                                    ptzSpaceInfo.setMaxYRange(Float.parseFloat(yRange.getPrimitivePropertySafely("Max").toString()));
-                                }
-                                ptzNode.setPtzSpaceInfo(ptzSpaceInfo);
-                                ptzServiceList.add(ptzNode);
-                            }
-                        }
-                        Dbug.w(tag, "ptzServiceList size=" + ptzServiceList.size());
-                        OnGetPtzServiceListener listener = (OnGetPtzServiceListener) msg.obj;
-                        if (listener != null) {
-                            listener.onSuccess(ptzServiceList);
-                        }
-                        break;
-                }
-            } else {
-                Log.e(tag, "Request and response failing");
-                switch (msg.what) {
-                    case MSG_GET_SERVICES:
-                        OnGetServicesListener onResponseListener = (OnGetServicesListener) msg.obj;
-                        if (onResponseListener != null) {
-                            onResponseListener.onFailure("Request failure.");
-                        }
-                        break;
-                    case MSG_GET_MEDIA_SERVICE:
-                        OnGetMediaServiceListener onGetMediaServiceListener = (OnGetMediaServiceListener) msg.obj;
-                        if (onGetMediaServiceListener != null) {
-                            onGetMediaServiceListener.onFailure("Request failure.");
-                        }
-                        break;
-                }
-            }
+            response = soapSerializationEnvelope.getResponse();
         } catch (SoapFault soapFault) {
             soapFault.printStackTrace();
         }
+
+        if (response == null) {
+            Log.e(tag, "Request and response failing");
+            switch (msg.what) {
+                case MSG_GET_SERVICES:
+                    OnGetServicesListener onResponseListener = (OnGetServicesListener) msg.obj;
+                    if (onResponseListener != null) {
+                        onResponseListener.onFailure("Request failure.");
+                    }
+                    break;
+                case MSG_GET_MEDIA_SERVICE:
+                    OnGetMediaServiceListener onGetMediaServiceListener = (OnGetMediaServiceListener) msg.obj;
+                    if (onGetMediaServiceListener != null) {
+                        onGetMediaServiceListener.onFailure("Request failure.");
+                    }
+                    break;
+            }
+            return;
+        }
+        if (response instanceof SoapFault) {
+            SoapFault fault = (SoapFault) response;
+            Exception ex = new Exception(fault.faultstring);
+            Dbug.e(tag, "SoapFault=" + ex.getMessage());
+        } else if (response instanceof SoapPrimitive) {
+            SoapPrimitive soapPrimitive = (SoapPrimitive) response;
+            Dbug.i(tag, "soapPrimitive="+ soapPrimitive.getName());
+        }
+
+        SoapObject result = (SoapObject) soapSerializationEnvelope.bodyIn;
+        Log.w(tag, "result getName: " + result.getName() + ", getPropertyCount=" + result.getPropertyCount());
+        Log.i(tag, "result=\n" + result.toString());
+        switch (msg.what) {
+            case MSG_GET_SERVICES:
+                List<ServiceInfo> serviceInfoList = new ArrayList<>();
+                for (int i = 0; i < result.getPropertyCount(); i++) {
+                    SoapObject sub = (SoapObject) result.getProperty(i);
+                    ServiceInfo serviceInfo = new ServiceInfo();
+                    serviceInfo.setNamespace(sub.getPropertySafely("Namespace").toString());
+                    serviceInfo.setUri(sub.getPropertySafely("XAddr").toString());
+                    serviceInfoList.add(serviceInfo);
+                }
+                OnGetServicesListener onResponseListener = (OnGetServicesListener) msg.obj;
+                if (onResponseListener != null) {
+                    onResponseListener.onSuccess(serviceInfoList);
+                }
+                break;
+            case MSG_GET_MEDIA_SERVICE:
+                List<StreamInfo> mediaServiceList = new ArrayList<>();
+                for (int i = 0; i < result.getPropertyCount(); i++) {
+                    SoapObject sub = (SoapObject) result.getProperty(i);
+                    StreamInfo streamInfo = new StreamInfo();
+                    streamInfo.setNamespace(sub.getPropertySafely("Namespace").toString());
+                    streamInfo.setUri(sub.getPropertySafely("XAddr").toString());
+                    streamInfo.setStreamUri(sub.getPropertySafely("Uri").toString());
+                    mediaServiceList.add(streamInfo);
+                }
+                OnGetMediaServiceListener onGetMediaServiceListener = (OnGetMediaServiceListener) msg.obj;
+                if (onGetMediaServiceListener != null) {
+                    onGetMediaServiceListener.onSuccess(mediaServiceList);
+                }
+                break;
+            case MSG_GET_PTZ_SERVICE:
+                //Dbug.e(tag, "result count="+ result.getPropertyCount());
+                List<PtzNode> ptzServiceList = new ArrayList<>();
+                for (int i = 0; i < result.getPropertyCount(); i++) {
+                    SoapObject ptzNodeObject = (SoapObject) result.getProperty(i);
+                    //Dbug.w(tag, "HomeSupported="+ ptzNodeObject.getPropertySafely("HomeSupported")
+                      //      +", name=" + ptzNodeObject.getPropertySafely("MaximumNumberOfPresets") + ", HomeSupported=" + ptzNodeObject.getPrimitivePropertySafely("HomeSupported"));
+
+                    PtzNode ptzNode = new PtzNode();
+
+                    ptzNode.setHomeSupported(Boolean.parseBoolean(ptzNodeObject.getPrimitivePropertySafely("HomeSupported").toString()));
+                    ptzNode.setMaximumNumberOfPresets(Integer.parseInt(ptzNodeObject.getPropertySafely("MaximumNumberOfPresets").toString()));
+                    SoapObject supportedPTZSpaces = (SoapObject) ptzNodeObject.getPropertySafely("SupportedPTZSpaces");
+                    for (int j = 0; j < supportedPTZSpaces.getPropertyCount(); j ++){
+                        PropertyInfo propertyInfo = supportedPTZSpaces.getPropertyInfo(j);
+                        //Dbug.e(tag, "getName==\n" + propertyInfo.getName() + ">>>>>>>"+propertyInfo.getNamespace()+", >>>>>>"+propertyInfo.getElementType()
+                        //+",>>>>>>>>>" + propertyInfo.getType()+",>>>>>>>" + propertyInfo.getFlags() + ",>>>>>>>>>>" +propertyInfo.getValue());
+                        SoapObject space = (SoapObject) supportedPTZSpaces.getPropertySafely(propertyInfo.getName());
+                        PtzSpaceInfo ptzSpaceInfo = new PtzSpaceInfo();
+                        //Dbug.w(tag, "URI=" + space.getPropertySafely("URI")+ ", nameSpace=" + space.getNamespace() +", nameSpace="+ propertyInfo.getNamespace());
+                        ptzSpaceInfo.setUri((String) space.getPrimitivePropertySafely("URI"));
+                        if (space.hasProperty("XRange")){
+                            SoapObject xRange = (SoapObject) space.getPropertySafely("XRange");
+                            //Dbug.w(tag, "Min=" + xRange.getPropertySafely("Min") + ",Max="+ xRange.getPropertySafely("Max"));
+                            ptzSpaceInfo.setMinXRange(Float.parseFloat(xRange.getPrimitivePropertySafely("Min").toString()));
+                            ptzSpaceInfo.setMaxXRange(Float.parseFloat(xRange.getPrimitivePropertySafely("Max").toString()));
+                        }
+                        if (space.hasProperty("YRange")){
+                            SoapObject yRange = (SoapObject) space.getPropertySafely("YRange");
+                            //Dbug.w(tag, "Min=" + yRange.getPropertySafely("Min") + ",Max="+ yRange.getPropertySafely("Max"));
+                            ptzSpaceInfo.setMinYRange(Float.parseFloat(yRange.getPrimitivePropertySafely("Min").toString()));
+                            ptzSpaceInfo.setMaxYRange(Float.parseFloat(yRange.getPrimitivePropertySafely("Max").toString()));
+                        }
+                        ptzNode.setPtzSpaceInfo(ptzSpaceInfo);
+                        ptzServiceList.add(ptzNode);
+                    }
+                }
+                Dbug.w(tag, "ptzServiceList size=" + ptzServiceList.size());
+                OnGetPtzServiceListener listener = (OnGetPtzServiceListener) msg.obj;
+                if (listener != null) {
+                    listener.onSuccess(ptzServiceList);
+                }
+                break;
+        }
+    }
+
+    private Element createHeader(SoapSerializationEnvelope envelope, String userName, String password) {
+        String securityNamespace = "http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd";
+        Element header = new Element().createElement(securityNamespace, "Security");
+        header.setPrefix("wsse", securityNamespace);
+        header.setAttribute(envelope.env, "mustUnderstand", "true");
+
+        String created = getCreated();
+        String nonce = getNonce();
+
+        Element usernameToken = new Element().createElement(securityNamespace, "UsernameToken");
+
+        Element usernameElement = new Element().createElement(securityNamespace, "Username");
+        usernameElement.addChild(Node.TEXT, userName);
+        usernameToken.addChild(Node.ELEMENT, usernameElement);
+
+        Element passwordElement = new Element().createElement(securityNamespace, "Password");
+        String type = "http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-username-token-profile-1.0#PasswordDigest";
+        //"http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-username-token-profile-1.0#PasswordText"
+        passwordElement.setAttribute(null, "Type", type);
+        passwordElement.addChild(Node.TEXT, getPasswordEncode(nonce, password, created));
+        usernameToken.addChild(Node.ELEMENT, passwordElement);
+
+        Element nonceElement = new Element().createElement(securityNamespace, "Nonce");
+        //"http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-soap-message-security-1.0#Base64Binary"
+        nonceElement.addChild(Node.TEXT, nonce);
+        usernameToken.addChild(Node.ELEMENT, nonceElement);
+
+        String wsuNamespace = "http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd";
+        Element createdElement = new Element().createElement(wsuNamespace, "Created");
+        createdElement.setPrefix("wsu", wsuNamespace);
+        createdElement.addChild(Node.TEXT, created);
+        usernameToken.addChild(Node.ELEMENT, createdElement);
+
+        header.addChild(Node.ELEMENT, usernameToken);
+        return header;
     }
 
     private OnProbeListener mOnProbeListener = null;
@@ -405,9 +469,12 @@ public class OnvifService {
         Message message = Message.obtain();
         message.what = MSG_GET_SERVICES;
         message.obj = listener;
-        Bundle b = new Bundle();
-        b.putString("service_url", deviceServiceURL);
-        message.setData(b);
+        Bundle bundle = new Bundle();
+        bundle.putString("service_url", deviceServiceURL);
+        bundle.putString("name_space", "http://www.onvif.org/ver10/device/wsdl");
+        bundle.putString("soap_action", "http://www.onvif.org/ver10/device/wsdl/GetServices");
+        bundle.putString("method_name", "GetServices");
+        message.setData(bundle);
         mHandler.sendMessageDelayed(message, 200);
     }
 
@@ -547,14 +614,18 @@ public class OnvifService {
         return addressList;
     }
 
+    private DatagramSocket udpSocket = null;
     private void broadcastProbeMessage(InetAddress inetAddress) {
         final String uuid = UUID.randomUUID().toString();
         final String probe = WS_DISCOVERY_PROBE_MESSAGE.replaceAll(
                 "<wsa:MessageID>urn:uuid:.*</wsa:MessageID>",
-                "<wsa:MessageID>urn:uuid:" + uuid
-                        + "</wsa:MessageID>");
+                "<wsa:MessageID>urn:uuid:" + uuid + "</wsa:MessageID>");
         final int port = random.nextInt(20000) + 40000;
-        DatagramSocket udpSocket = null;
+        Dbug.i(tag, "UUID=" + uuid + ", port=" + port);
+
+        if (udpSocket != null) {
+            udpSocket.close();
+        }
         try {
             udpSocket = new DatagramSocket(port, inetAddress);
         } catch (SocketException e) {
