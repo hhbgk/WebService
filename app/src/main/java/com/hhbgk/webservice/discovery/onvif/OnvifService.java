@@ -188,44 +188,44 @@ public class OnvifService {
         SoapObject soapObject = new SoapObject(nameSpace, methodName);
 
         SoapObject tempSoapObject, attributeSoapObject;
+        String ttNamespace = "http://www.onvif.org/ver10/schema";
         switch (msg.what) {
             case MSG_GET_MEDIA_SERVICE:
-                soapObject.addProperty("Stream", "RTP-Unicast");
-                soapObject.addProperty("Protocol", "UDP");
-                soapObject.addProperty("ProfileToken", "PROFILE_000");
+                tempSoapObject = new SoapObject(nameSpace, "StreamSetup");
+
+                SoapObject transportSoapObject = new SoapObject();
+                transportSoapObject.addProperty(ttNamespace, "Protocol", "UDP");
+
+                tempSoapObject.addProperty(ttNamespace, "Transport", transportSoapObject);
+                tempSoapObject.addProperty(ttNamespace, "Stream", "RTP-Unicast");
+
+                soapObject.addSoapObject(tempSoapObject);
+                soapObject.addProperty(nameSpace, "ProfileToken", "PROFILE_000");
                 break;
             case MSG_SET_PTZ_CONTINUOUS_MOVE_UP:
-                //soapObject.addAttribute();
-                /*AttributeInfo attributeInfo = new AttributeInfo();
-                attributeInfo.setType(String.class);
-                attributeInfo.setNamespace(nameSpace);
-                soapObject.addAttribute(attributeInfo);
-                soapObject.setAttribute(attributeInfo);*/
 
                 soapObject.addProperty(nameSpace, "ProfileToken", "PROFILE_000");
 
-                //"http://www.onvif.org/ver10/schema"
-                attributeSoapObject = new SoapObject("http://www.onvif.org/ver10/schema", "PanTilt");
+                attributeSoapObject = new SoapObject();
                 attributeSoapObject.addAttribute("space", "http://www.onvif.org/ver10/tptz/PanTiltSpaces/VelocityGenericSpace");
                 attributeSoapObject.addAttribute("y", "0.5");
                 attributeSoapObject.addAttribute("x", "0");
 
                 tempSoapObject = new SoapObject(nameSpace, "Velocity");
-                //tempSoapObject.addProperty("PanTilt", attributeSoapObject);
-                tempSoapObject.addSoapObject(attributeSoapObject);
+                tempSoapObject.addProperty(ttNamespace, "PanTilt", attributeSoapObject);
                 soapObject.addSoapObject(tempSoapObject);
                 break;
             case MSG_SET_PTZ_CONTINUOUS_MOVE_DOWN:
-                soapObject.addProperty("ProfileToken", "PROFILE_000");
+                soapObject.addProperty(nameSpace, "ProfileToken", "PROFILE_000");
 
                 attributeSoapObject = new SoapObject();
                 attributeSoapObject.addAttribute("space", "http://www.onvif.org/ver10/tptz/PanTiltSpaces/VelocityGenericSpace");
                 attributeSoapObject.addAttribute("y", "-0.5");
                 attributeSoapObject.addAttribute("x", "0");
 
-                tempSoapObject = new SoapObject();
-                tempSoapObject.addProperty("PanTilt", attributeSoapObject);
-                soapObject.addProperty("Velocity", tempSoapObject);
+                tempSoapObject = new SoapObject(nameSpace, "Velocity");
+                tempSoapObject.addProperty(ttNamespace, "PanTilt", attributeSoapObject);
+                soapObject.addSoapObject(tempSoapObject);
                 break;
             case MSG_SET_PTZ_CONTINUOUS_MOVE_LEFT:
                 soapObject.addProperty("ProfileToken", "PROFILE_000");
@@ -235,9 +235,9 @@ public class OnvifService {
                 attributeSoapObject.addAttribute("x", "-0.5");
                 attributeSoapObject.addAttribute("y", "0");
 
-                tempSoapObject = new SoapObject();
-                tempSoapObject.addProperty("PanTilt", attributeSoapObject);
-                soapObject.addProperty("Velocity", tempSoapObject);
+                tempSoapObject = new SoapObject(nameSpace, "Velocity");
+                tempSoapObject.addProperty(ttNamespace, "PanTilt", attributeSoapObject);
+                soapObject.addSoapObject(tempSoapObject);
                 break;
             case MSG_SET_PTZ_CONTINUOUS_MOVE_RIGHT:
                 soapObject.addProperty("ProfileToken", "PROFILE_000");
@@ -247,26 +247,26 @@ public class OnvifService {
                 attributeSoapObject.addAttribute("x", "0.5");
                 attributeSoapObject.addAttribute("y", "0");
 
-                tempSoapObject = new SoapObject();
-                tempSoapObject.addProperty("PanTilt", attributeSoapObject);
-                soapObject.addProperty("Velocity", tempSoapObject);
+                tempSoapObject = new SoapObject(nameSpace, "Velocity");
+                tempSoapObject.addProperty(ttNamespace, "PanTilt", attributeSoapObject);
+                soapObject.addSoapObject(tempSoapObject);
                 break;
             case MSG_STOP_PTZ_CONTINUOUS_MOVE:
-                soapObject.addProperty("ProfileToken", "PROFILE_000");
-                soapObject.addProperty("PanTilt", "true");
-                soapObject.addProperty("Zoom", "false");
+                soapObject.addProperty(nameSpace, "ProfileToken", "PROFILE_000");
+                soapObject.addProperty(nameSpace, "PanTilt", "true");
+                soapObject.addProperty(nameSpace, "Zoom", "false");
                 break;
             case MSG_PTZ_GOTO_HOME_POSITION:
-                soapObject.addProperty("ProfileToken", "PROFILE_000");
+                soapObject.addProperty(nameSpace, "ProfileToken", "PROFILE_000");
 
                 attributeSoapObject = new SoapObject();
                 attributeSoapObject.addAttribute("space", "http://www.onvif.org/ver10/tptz/PanTiltSpaces/VelocityGenericSpace");
-                attributeSoapObject.addAttribute("y", "0.5");
+                attributeSoapObject.addAttribute("y", "0");
                 attributeSoapObject.addAttribute("x", "0");
 
-                tempSoapObject = new SoapObject();
-                tempSoapObject.addProperty("PanTilt", attributeSoapObject);
-                soapObject.addProperty("Speed", tempSoapObject);
+                tempSoapObject = new SoapObject(nameSpace, "Speed");
+                tempSoapObject.addProperty(ttNamespace, "PanTilt", attributeSoapObject);
+                soapObject.addSoapObject(tempSoapObject);
                 break;
         }
         final SoapSerializationEnvelope soapSerializationEnvelope = new SoapSerializationEnvelope(SoapEnvelope.VER12);
