@@ -169,38 +169,32 @@ public class OnvifService {
             soapFault.printStackTrace();
         }
 
-        if (response == null) {
-            Log.e(tag, "Request and response failing");
-            switch (msg.what) {
-                case MSG_GET_SERVICES:
-                    OnGetServicesListener onResponseListener = (OnGetServicesListener) msg.obj;
-                    if (onResponseListener != null) {
-                        onResponseListener.onFailure("Request failure.");
-                    }
-                    break;
-                case MSG_GET_MEDIA_SERVICE:
-                    OnGetMediaServiceListener onGetMediaServiceListener = (OnGetMediaServiceListener) msg.obj;
-                    if (onGetMediaServiceListener != null) {
-                        onGetMediaServiceListener.onFailure("Request failure.");
-                    }
-                    break;
-            }
-            return;
-        }
-
         if (response instanceof SoapFault) {
             SoapFault fault = (SoapFault) response;
             Exception ex = new Exception(fault.faultstring);
-            Dbug.e(tag, "SoapFault=" + ex.getMessage());
+            String faultInformation = "Request fault:" + ex.getMessage() + ", fault code:" + fault.faultcode;
+            if (msg.obj instanceof OnGetMediaServiceListener) {
+                ((OnGetMediaServiceListener)msg.obj).onFailure(faultInformation);
+            } else if (msg.obj instanceof OnGetServicesListener) {
+                ((OnGetServicesListener)msg.obj).onFailure(faultInformation);
+            } else if(msg.obj instanceof OnProbeListener) {
+                ((OnProbeListener)msg.obj).onFailure(faultInformation);
+            } else if (msg.obj instanceof OnGetPtzServiceListener) {
+                ((OnGetPtzServiceListener)msg.obj).onFailure(faultInformation);
+            }
+
         } else if (response instanceof SoapPrimitive) {
             SoapPrimitive soapPrimitive = (SoapPrimitive) response;
-            Dbug.i(tag, "soapPrimitive="+ soapPrimitive.getName());
+            Dbug.e(tag, "soapPrimitive="+ soapPrimitive.getName());
         }
 
         SoapObject result = (SoapObject) soapSerializationEnvelope.bodyIn;
-        Log.w(tag, "result getName: " + result.getName() + ", getPropertyCount=" + result.getPropertyCount());
-        Log.i(tag, "result=\n" + result.toString());
-        parseResponse(result, msg);
+        if (result != null && result.getPropertyCount() > 0) {
+            Log.w(tag, "result getName: " + result.getName() + ", getPropertyCount=" + result.getPropertyCount() + ", result=\n" + result.toString());
+            parseResponse(result, msg);
+        } else {
+            Log.e(tag, "soapSerializationEnvelope.bodyIn is empty.");
+        }
     }
 
     /**打包请求的操作信息
