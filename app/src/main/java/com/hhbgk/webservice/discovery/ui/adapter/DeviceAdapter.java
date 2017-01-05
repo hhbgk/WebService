@@ -31,20 +31,21 @@ public class DeviceAdapter extends RecyclerView.Adapter<DeviceAdapter.ViewHolder
     }
 
     @Override
-    public void onBindViewHolder(ViewHolder holder, final int position) {
+    public void onBindViewHolder(final ViewHolder holder, final int position) {
         Log.i("DeviceAdapter", "mData.get(position).getName()=" + mData.get(position).getName());
         CameraInfo ipCamera = mData.get(position);
         holder.name.setText(ipCamera.getName());
         holder.location.setText(ipCamera.getLocation());
         holder.baseUrl.setText(ipCamera.getUri());
-        holder.itemView.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                if (mOnItemClickListener != null) {
-                    mOnItemClickListener.onItemClick(v, position);
+        if (mOnItemClickListener != null) {
+            holder.itemView.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    int pos = holder.getLayoutPosition();
+                    mOnItemClickListener.onItemClick(v, pos);
                 }
-            }
-        });
+            });
+        }
     }
 
     @Override
@@ -94,6 +95,7 @@ public class DeviceAdapter extends RecyclerView.Adapter<DeviceAdapter.ViewHolder
          * @param position The position of the view in the adapter.
          */
         void onItemClick(View view, int position);
+        void onItemLongClick(View view , int position);
     }
 
     /**

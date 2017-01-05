@@ -63,6 +63,11 @@ public class DeviceList extends Fragment {
                     }
                 });
             }
+
+            @Override
+            public void onItemLongClick(View view, int position) {
+
+            }
         });
 
         mSearchBtn.setOnClickListener(new View.OnClickListener() {
